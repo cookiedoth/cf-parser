@@ -10,7 +10,6 @@ try:
 	csvfile = open('cf.csv', newline='')
 	reader = csv.DictReader(csvfile)
 	parsed_names = set(map(lambda dct : dct['name'], reader))
-	parsed_names.remove('name')
 	csvfile.close()
 except FileNotFoundError:
 	pass
@@ -23,10 +22,12 @@ try:
 except FileNotFoundError:
 	pass
 
+needHeader = parsed_names.empty()
 f = open('cf.csv', 'a')
 writer = csv.writer(f)
 headers = ['name', 'legend', 'input', 'output', 'note', 'time_limit', 'memory_limit', 'rating', 'tags']
-writer.writerow(headers)
+if needHeader:
+	writer.writerow(headers)
 
 problems = requests.get("https://codeforces.com/api/problemset.problems").json()
 

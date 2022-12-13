@@ -11,7 +11,7 @@ def parse_statement_part(tag):
 
 
 def parse_constraint(tag):
-	occ = re.findall('\\d+', tag.text)
+	occ = re.findall('\\d+(?:\\.\\d+)?', tag.text)
 	return occ[0] if len(occ) == 1 else None
 
 
@@ -91,7 +91,7 @@ def parse_problem(url):
 
 
 if __name__ == '__main__':
-	url = 'https://codeforces.com/problemset/problem/1773/I'
+	url = 'https://codeforces.com/contest/1712/problem/F'
 	result = parse_problem(url)
 	pp = pprint.PrettyPrinter()
 	pp.pprint(result)
