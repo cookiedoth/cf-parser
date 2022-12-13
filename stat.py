@@ -1,6 +1,6 @@
 import csv
 
-csvfile = open('cf_new.csv', newline='')
+csvfile = open('cf.csv', newline='')
 reader = csv.DictReader(csvfile)
 
 len_sorted = []

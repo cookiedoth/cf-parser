@@ -1,41 +1,98 @@
 import requests
 import sys
 from bs4 import BeautifulSoup
+import pprint
+import re
 
-# returns a string
+
 def parse_statement_part(tag):
-	ps = tag.findChildren('p', recursive=False)
-	return '\n'.join(map(lambda p : p.text, ps))
+	ch = list(filter(lambda tag: tag.name == 'li' or tag.name == 'p', tag.find_all()))
+	return '\n'.join(map(lambda p : p.text, ch))
 
-class_to_statement_part = {
-	None: 'legend',
-	'input-specification': 'input',
-	'output-specification': 'output',
+
+def parse_constraint(tag):
+	occ = re.findall('\\d+', tag.text)
+	return occ[0] if len(occ) == 1 else None
+
+
+statement_part_class = {
+	'legend': None,
+	'input': 'input-specification',
+	'output': 'output-specification',
 	'note': 'note'
+}
+
+constraint_class = {
+	'time_limit': 'time-limit',
+	'memory_limit': 'memory-limit'
 }
 
 err = open('err', 'w')
 err.close()
 
-# returns dictionary with keys "statement", "input", "output", "notes"
+
+def fetch_problem_parameter(url, statement, name, class_name, recursive, tag_count, tag_id, downstream_parser, result, err):
+	tags = statement.findChildren('div', attrs={'class': class_name}, recursive=recursive)
+	parsed = downstream_parser(tags[tag_id]) if len(tags) == tag_count else None
+	if parsed is None or parsed == '':
+		print(f'Did not parse {url} {name}', file=err)
+	else:
+		result[name] = parsed
+
+
+def is_interactive(statement):
+	return any('Interaction' in tag.text for tag in
+		statement.findChildren('div', attrs={'class': 'section-title'}))
+
+
+def parse_statement_interactive(url, statement, result, err):
+	fetch_problem_parameter(
+		url, statement, 'legend', None,
+		False, 2, 0, parse_statement_part, result, err)
+	fetch_problem_parameter(
+		url, statement, 'input', None,
+		False, 2, 1, parse_statement_part, result, err)
+	fetch_problem_parameter(
+		url, statement, 'note', 'note',
+		False, 1, 0, parse_statement_part, result, err)
+
+
+def parse_statement_non_interactive(url, statement, result, err):
+	for name, class_name in statement_part_class.items():
+		fetch_problem_parameter(
+			url, statement, name, class_name,
+			False, 1, 0, parse_statement_part, result, err)
+
+
+def parse_all_constrains(url, statement, result, err):
+	for name, class_name in constraint_class.items():
+		fetch_problem_parameter(
+			url, statement, name, class_name,
+			True, 1, 0, parse_constraint, result, err)
+
+
+# returns dictionary with keys "statement", "input", "output",
+# "notes", "time_limit", "memory_limit"
 def parse_problem(url):
 	err = open('err', 'a')
 	result = {}
 	html_doc = requests.get(url).text
 	soup = BeautifulSoup(html_doc, 'html.parser')
 	statement = soup.find('div', class_='problem-statement')
-	for class_, name in class_to_statement_part.items():
-		part = statement.findChildren('div', attrs={'class': class_}, recursive=False)
-		if len(part) != 1:
-			print(f'Skipped {url} {name}, {len(part)} tags found', file=err)
-			continue
-		parsed = parse_statement_part(part[0])
-		if not parsed:
-			print(f'Empty {url} {name}', file=err)
-			continue
-		result[name] = parsed
+
+	if is_interactive(statement):
+		parse_statement_interactive(url, statement, result, err)
+	else:
+		parse_statement_non_interactive(url, statement, result, err)
+
+	parse_all_constrains(url, statement, result, err)
+
 	return result
 
+
 if __name__ == '__main__':
-	url = 'https://codeforces.com/contest/1660/problem/A'
-	parse_problem(url)
+	url = 'https://codeforces.com/problemset/problem/1773/I'
+	result = parse_problem(url)
+	pp = pprint.PrettyPrinter()
+	pp.pprint(result)
+
