@@ -22,7 +22,7 @@ try:
 except FileNotFoundError:
 	pass
 
-needHeader = parsed_names.empty()
+needHeader = not parsed_names
 f = open('cf.csv', 'a')
 writer = csv.writer(f)
 headers = ['name', 'legend', 'input', 'output', 'note', 'time_limit', 'memory_limit', 'rating', 'tags']
